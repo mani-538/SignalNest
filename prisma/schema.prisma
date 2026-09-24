@@ -1,0 +1,190 @@
+// Prisma Schema for SignalNest - Social Media Command Center
+// Multi-platform command center architecture supporting PostgreSQL and SQLite
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  name         String?
+  avatarUrl    String?
+  role         String        @default("commander") // commander, admin, reviewer, member
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  workspaces   WorkspaceMember[]
+  auditLogs    AuditLog[]
+  approvals    ApprovalRequest[]
+}
+
+model Workspace {
+  id           String             @id @default(cuid())
+  name         String
+  slug         String             @unique
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  members      WorkspaceMember[]
+  connections  SocialConnection[]
+  events       SocialEvent[]
+  contentItems ContentItem[]
+  approvals    ApprovalRequest[]
+  analytics    AnalyticsSnapshot[]
+  rules        NotificationRule[]
+  auditLogs    AuditLog[]
+}
+
+model WorkspaceMember {
+  id          String     @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String     @default("member")
+
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model SocialConnection {
+  id              String       @id @default(cuid())
+  workspaceId     String
+  provider        String       // GITHUB, LINKEDIN, INSTAGRAM, FACEBOOK, X, YOUTUBE, TIKTOK, REDDIT, DISCORD, TELEGRAM, SLACK
+  accountName     String?
+  accountId       String?
+  status          String       @default("disconnected") // connected, disconnected, expired, error, pending_consent
+  allowedScopes   String?      // JSON array of authorized scopes
+  encryptedToken  String?      // AES-256 encrypted access token placeholder
+  refreshToken    String?      // Encrypted refresh token placeholder
+  expiresAt       DateTime?
+  metadata        String?      // JSON arbitrary metadata (avatar, profile url, org id)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  events          SocialEvent[]
+
+  @@unique([workspaceId, provider, accountId])
+}
+
+model SocialEvent {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  connectionId    String?
+  source          String            // GITHUB, LINKEDIN, X, etc.
+  type            String            // COMMENT, DM, MENTION, PR, ISSUE, REVIEW, REACTION
+  authorName      String
+  authorHandle    String?
+  authorAvatar    String?
+  content         String
+  url             String?
+  priority        Int               @default(50) // 1-100 scale
+  sentiment       String            @default("neutral") // positive, neutral, negative, urgent
+  status          String            @default("needs_reply") // needs_reply, replied, approved, done, dismissed
+  suggestedReply  String?
+  aiSummary       String?
+  occurredAt      DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  connection      SocialConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  approval        ApprovalRequest?
+}
+
+model ContentItem {
+  id              String            @id @default(cuid())
+  workspaceId     String
+  coreIdea        String
+  platform        String            // LINKEDIN, INSTAGRAM, X, FACEBOOK, YOUTUBE, TIKTOK, GITHUB
+  title           String?
+  draft           String
+  status          String            @default("draft") // idea, draft, needs_approval, approved, scheduled, published, failed
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  mediaMetadata   String?           // JSON array or object for images, videos, audio notes
+  hashtags        String?           // Comma-separated or JSON
+  cta             String?
+  tone            String?           // Thought Leadership, Technical, Casual, Punchy
+  targetAudience  String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  workspace       Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  approval        ApprovalRequest?
+}
+
+model ApprovalRequest {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  actionType    String       // PUBLISH_POST, PUBLIC_REPLY, MERGE_RELEASE, DELETE_CONTENT
+  targetType    String       // CONTENT_ITEM, SOCIAL_EVENT
+  targetId      String       @unique // References ContentItem or SocialEvent
+  payload       String       // JSON payload of the action to be performed
+  status        String       @default("pending") // pending, approved, rejected, cancelled
+  reviewerId    String?
+  notes         String?
+  createdAt     DateTime     @default(now())
+  decidedAt     DateTime?
+
+  workspace     Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  reviewer      User?        @relation(fields: [reviewerId], references: [id], onDelete: SetNull)
+  contentItem   ContentItem? @relation(fields: [targetId], references: [id], map: "Approval_ContentItem_fk")
+  socialEvent   SocialEvent? @relation(fields: [targetId], references: [id], map: "Approval_SocialEvent_fk")
+}
+
+model AnalyticsSnapshot {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  provider        String    // ALL, GITHUB, LINKEDIN, X, INSTAGRAM, etc.
+  date            DateTime
+  followersTotal  Int       @default(0)
+  followersDelta  Int       @default(0)
+  impressions     Int       @default(0)
+  reach           Int       @default(0)
+  engagements     Int       @default(0)
+  engagementRate  Float     @default(0.0)
+  shares          Int       @default(0)
+  topPostJson     String?   // JSON snapshot of top performing asset
+  createdAt       DateTime  @default(now())
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider, date])
+}
+
+model NotificationRule {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  name            String
+  condition       String    // HIGH_PRIORITY_INBOX, NEW_PR, MENTION_VIP, SENTIMENT_URGENT
+  channel         String    // IN_APP, SLACK, DISCORD, TELEGRAM, EMAIL
+  channelTarget   String?   // e.g. webhook URL or channel ID
+  isEnabled       Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  userId          String?
+  action          String    // APPROVED_POST, REJECTED_POST, SCHEDULED_POST, EDITED_DRAFT, CONNECTED_PROVIDER, DISCONNECTED_PROVIDER
+  resourceType    String    // ContentItem, SocialEvent, SocialConnection, Setting
+  resourceId      String
+  details         String?   // JSON object detailing state changes or rationale
+  ipAddress       String?
+  createdAt       DateTime  @default(now())
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
