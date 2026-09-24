@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Content item created. Saved in approval-first pipeline.",
+      message: "Draft saved.",
       data: created,
     });
   } catch (error: any) {

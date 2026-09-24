@@ -13,6 +13,7 @@ out/
 *.db
 *.db-journal
 *.log
+*.tsbuildinfo
 
 # Private GitHub App keys
 *.pem

@@ -1,13 +1,4 @@
 import {
-  initialAnalyticsSnapshots,
-  initialConnections,
-  initialContentItems,
-  initialEvents,
-  initialAuditLogs,
-  initialNotificationRules,
-  defaultBrandSettings,
-} from "./mock-data";
-import {
   AnalyticsSnapshot,
   BrandSettings,
   ContentItem,
@@ -22,14 +13,33 @@ import {
 
 // In-memory persistent state container for the server lifecycle
 class DataStore {
-  private connections: SocialConnection[] = [...initialConnections];
-  // Real workspace data starts empty. Demo fixtures stay available for tests only.
+  private connections: SocialConnection[] = (["github", "linkedin", "instagram", "facebook", "x", "youtube", "tiktok", "reddit", "discord", "telegram", "slack"] as PlatformType[]).map((provider) => ({
+    id: `connection-${provider}`,
+    provider,
+    accountName: "",
+    accountId: "",
+    status: "disconnected",
+    allowedScopes: [],
+    encryptedTokenPlaceholder: "",
+    capabilities: [],
+    webhookSupported: provider === "github",
+    pollingFallback: false,
+  }));
   private events: SocialEvent[] = [];
   private contentItems: ContentItem[] = [];
   private analytics: AnalyticsSnapshot[] = [];
-  private notificationRules: NotificationRule[] = [...initialNotificationRules];
-  private auditLogs: AuditLog[] = [...initialAuditLogs];
-  private brandSettings: BrandSettings = { ...defaultBrandSettings };
+  private notificationRules: NotificationRule[] = [];
+  private auditLogs: AuditLog[] = [];
+  private brandSettings: BrandSettings = {
+    userName: "",
+    userEmail: "",
+    avatarUrl: "",
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    brandVoice: "",
+    writingTone: "Thought Leadership",
+    bannedTopics: [],
+    approvalPolicy: { alwaysRequireApprovalForReplies: true, alwaysRequireApprovalForPublishing: true, notifyOnHighPriority: true, dualReviewForExecutivePosts: false },
+  };
 
   // Connections
   getConnections(): SocialConnection[] {
@@ -313,7 +323,7 @@ class DataStore {
       resourceType,
       resourceId,
       description,
-      actor: `${this.brandSettings.userName} (Commander)`,
+      actor: this.brandSettings.userName || "Workspace owner",
       timestamp: new Date().toISOString(),
       details,
     };
@@ -327,10 +337,10 @@ class DataStore {
 }
 
 // Global singleton for Next.js dev server & production runtime
-const globalForStore = globalThis as unknown as { signalNestStore?: DataStore };
-
-export const store = globalForStore.signalNestStore ?? new DataStore();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForStore.signalNestStore = store;
+const STORE_VERSION = "real-product-v1";
+const globalForStore = globalThis as unknown as { signalNestStore?: DataStore; signalNestStoreVersion?: string };
+if (!globalForStore.signalNestStore || globalForStore.signalNestStoreVersion !== STORE_VERSION) {
+  globalForStore.signalNestStore = new DataStore();
+  globalForStore.signalNestStoreVersion = STORE_VERSION;
 }
+export const store = globalForStore.signalNestStore;
