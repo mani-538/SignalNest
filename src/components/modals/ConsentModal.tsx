@@ -36,6 +36,10 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
   const handleAction = async () => {
     setLoading(true);
     try {
+      if (connection.provider === "github" && !isConnected) {
+        window.location.assign("/api/auth/github");
+        return;
+      }
       await onToggleConnection(connection.provider, !isConnected);
       onClose();
     } finally {
@@ -73,7 +77,9 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
             <div>
               <p className="font-medium text-amber-300">Sandbox Preview Flow</p>
               <p className="text-amber-200/80 text-[11px] mt-0.5 leading-relaxed">
-                In this approval-first MVP, no live social accounts will be touched. Clicking &apos;Connect&apos; simulates an authorized handshake using mock OAuth tokens stored in an AES-256 encrypted placeholder vault.
+                {connection.provider === "github"
+                  ? "GitHub uses its real official OAuth approval screen. SignalNest will read your basic GitHub profile after you approve; no GitHub action is published automatically."
+                  : "In this approval-first MVP, no live social accounts will be touched. This connection remains a preview until its official OAuth flow is implemented."}
               </p>
             </div>
           </div>
@@ -168,7 +174,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
             ) : isConnected ? (
               "Disconnect Integration"
             ) : (
-              "Authorize Connection (Mock)"
+              connection.provider === "github" ? "Continue to GitHub" : "Authorize Connection (Preview)"
             )}
           </button>
         </div>

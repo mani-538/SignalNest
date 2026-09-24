@@ -19,7 +19,7 @@ export async function POST(
     const verification = await adapter.verifyWebhookSignature(
       rawBody,
       signatureHeader,
-      process.env[`${provider.toUpperCase()}_WEBHOOK_SECRET`] || "mock_secret"
+      process.env[`${provider.toUpperCase()}_WEBHOOK_SECRET`] || ""
     );
 
     if (!verification.isValid) {

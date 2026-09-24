@@ -28,11 +28,11 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Unified Inbox", href: "/inbox", icon: Inbox, badge: "6", badgeColor: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
+  { name: "Unified Inbox", href: "/inbox", icon: Inbox },
   { name: "Content Studio", href: "/studio", icon: Sparkles },
-  { name: "Calendar", href: "/calendar", icon: Calendar, badge: "3", badgeColor: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30" },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Integrations", href: "/integrations", icon: Boxes, badge: "11", badgeColor: "bg-slate-700 text-slate-300" },
+  { name: "Integrations", href: "/integrations", icon: Boxes },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -74,15 +74,6 @@ export const Sidebar: React.FC = () => {
               <p className="text-xs text-slate-400">Social Command Center</p>
             </div>
           </Link>
-        </div>
-
-        {/* Approval Guardrail indicator */}
-        <div className="mx-3 mt-4 px-3 py-2 bg-indigo-950/30 border border-indigo-900/40 rounded-lg flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-indigo-400 flex-shrink-0" />
-          <div className="text-[11px] leading-tight text-indigo-200/90">
-            <span className="font-semibold text-indigo-300">Approval-First Mode</span>
-            <p className="text-[10px] text-slate-400">Zero live automated posting</p>
-          </div>
         </div>
 
         {/* Main Navigation */}

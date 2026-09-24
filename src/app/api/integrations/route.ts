@@ -33,11 +33,14 @@ export async function POST(request: Request) {
     }
 
     const adapter = getProviderAdapter(provider);
+    if (provider === "github" && connected) {
+      return NextResponse.json({ success: false, error: "Use the GitHub OAuth flow to connect this account." }, { status: 400 });
+    }
     const updated = store.toggleConnection(provider, connected);
 
     return NextResponse.json({
       success: true,
-      message: `${adapter.displayName} ${connected ? "mock connection established" : "disconnected"} successfully.`,
+      message: `${adapter.displayName} ${connected ? "connection is not available yet" : "disconnected"}.`,
       data: updated,
     });
   } catch (error: any) {

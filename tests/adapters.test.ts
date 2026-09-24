@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getProviderAdapter, getAllAdapters } from "../src/lib/adapters";
 import { PlatformType } from "../src/types";
+import { createHmac } from "crypto";
 
 describe("Social Provider Adapters & OAuth Boundaries", () => {
   const allPlatforms: PlatformType[] = [
@@ -44,14 +45,18 @@ describe("Social Provider Adapters & OAuth Boundaries", () => {
     const gh = getProviderAdapter("github");
     const payload = JSON.stringify({ action: "opened", pull_request: { id: 142 } });
 
-    // Valid header prefix
-    const result = await gh.verifyWebhookSignature(payload, "sha256=abcdef123456", "my_secret");
+    const secret = "my_secret";
+    const signature = `sha256=${createHmac("sha256", secret).update(payload).digest("hex")}`;
+    const result = await gh.verifyWebhookSignature(payload, signature, secret);
     expect(result.isValid).toBe(true);
     expect(result.eventPayload).toBeDefined();
 
     // Missing header
     const badResult = await gh.verifyWebhookSignature(payload, "", "my_secret");
     expect(badResult.isValid).toBe(false);
+
+    const tamperedResult = await gh.verifyWebhookSignature(payload, "sha256=abcdef123456", secret);
+    expect(tamperedResult.isValid).toBe(false);
   });
 
   it("enforces approval requirement on publishPost and sendReply in MVP boundary", async () => {

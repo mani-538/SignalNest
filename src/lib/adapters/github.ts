@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 import { BaseSocialAdapter, OAuthConfig, PublishResult, SocialProviderAdapter, WebhookVerificationResult } from "./base";
 
 export class GitHubAdapter extends BaseSocialAdapter implements SocialProviderAdapter {
@@ -32,10 +33,26 @@ export class GitHubAdapter extends BaseSocialAdapter implements SocialProviderAd
   }
 
   async exchangeCodeForToken(code: string) {
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientSecret || !clientId) {
+      throw new Error("GitHub OAuth is not configured. Add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to .env.");
+    }
+
+    const response = await fetch(this.config.tokenUrl, {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code }),
+      cache: "no-store",
+    });
+    const data = await response.json() as { access_token?: string; scope?: string; error?: string; error_description?: string };
+    if (!response.ok || !data.access_token) {
+      throw new Error(data.error_description || data.error || "GitHub did not return an access token.");
+    }
     return {
-      accessToken: this.encryptTokenForVault(`gho_mock_${code}_${Date.now()}`),
-      expiresIn: 3600 * 24 * 365,
-      scopes: this.config.requiredScopes,
+      accessToken: data.access_token,
+      expiresIn: 0,
+      scopes: data.scope?.split(",").filter(Boolean) ?? this.config.requiredScopes,
     };
   }
 
@@ -44,12 +61,13 @@ export class GitHubAdapter extends BaseSocialAdapter implements SocialProviderAd
     signatureHeader: string,
     secret: string
   ): Promise<WebhookVerificationResult> {
-    // Standard HMAC-SHA256 signature verification logic for GitHub x-hub-signature-256
     if (!signatureHeader || !secret) {
       return { isValid: false, error: "Missing signature or webhook secret" };
     }
-    // In production: crypto.createHmac("sha256", secret).update(rawBody).digest("hex") === signatureHeader
-    const isValid = signatureHeader.startsWith("sha256=") || signatureHeader.length > 10;
+    const expected = `sha256=${createHmac("sha256", secret).update(rawBody).digest("hex")}`;
+    const received = Buffer.from(signatureHeader);
+    const expectedBuffer = Buffer.from(expected);
+    const isValid = received.length === expectedBuffer.length && timingSafeEqual(received, expectedBuffer);
     try {
       const eventPayload = JSON.parse(rawBody);
       return { isValid, eventPayload };

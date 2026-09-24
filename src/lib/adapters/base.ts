@@ -1,4 +1,5 @@
 import { PlatformType } from "@/types";
+import { randomBytes } from "crypto";
 
 export interface OAuthConfig {
   provider: PlatformType;
@@ -36,6 +37,9 @@ export interface SocialProviderAdapter {
   displayName: string;
   category: "developer" | "professional" | "visual" | "messaging" | "community";
   config: OAuthConfig;
+
+  // Cryptographically strong one-time state used by OAuth callbacks.
+  generateOAuthState(): string;
 
   // Build OAuth authorization URL for user consent
   getAuthorizationUrl(state: string): string;
@@ -87,7 +91,7 @@ export class BaseSocialAdapter {
 
   // Generates safe state for CSRF defense
   generateOAuthState(): string {
-    return `sn_state_${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+    return randomBytes(32).toString("base64url");
   }
 
   // Encryption helper placeholder for storing OAuth tokens in database vault

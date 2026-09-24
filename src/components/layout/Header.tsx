@@ -31,12 +31,6 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, actions }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Environment / Approval Guard badge */}
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-950/40 border border-indigo-800/40 text-xs text-indigo-300">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-ping" />
-          <span className="text-[11px] font-mono">MVP Sandbox (Approval Guard Active)</span>
-        </div>
-
         {actions}
 
         {/* Global Quick Action: Compose */}

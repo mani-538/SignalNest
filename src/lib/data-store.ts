@@ -23,9 +23,10 @@ import {
 // In-memory persistent state container for the server lifecycle
 class DataStore {
   private connections: SocialConnection[] = [...initialConnections];
-  private events: SocialEvent[] = [...initialEvents];
-  private contentItems: ContentItem[] = [...initialContentItems];
-  private analytics: AnalyticsSnapshot[] = [...initialAnalyticsSnapshots];
+  // Real workspace data starts empty. Demo fixtures stay available for tests only.
+  private events: SocialEvent[] = [];
+  private contentItems: ContentItem[] = [];
+  private analytics: AnalyticsSnapshot[] = [];
   private notificationRules: NotificationRule[] = [...initialNotificationRules];
   private auditLogs: AuditLog[] = [...initialAuditLogs];
   private brandSettings: BrandSettings = { ...defaultBrandSettings };
@@ -56,6 +57,18 @@ class DataStore {
       `${connected ? "Simulated OAuth connection" : "Disconnected"} for ${provider.toUpperCase()}`
     );
 
+    return conn;
+  }
+
+  completeGitHubOAuth(input: { accountId: string; accountName: string; avatarUrl?: string; scopes: string[] }): SocialConnection {
+    const conn = this.connections.find((c) => c.provider === "github");
+    if (!conn) throw new Error("GitHub connection record not found");
+    conn.status = "connected";
+    conn.accountId = input.accountId;
+    conn.accountName = input.accountName;
+    conn.avatarUrl = input.avatarUrl;
+    conn.allowedScopes = input.scopes;
+    conn.encryptedTokenPlaceholder = "server-session-only";
     return conn;
   }
 
